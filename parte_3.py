@@ -10,5 +10,5 @@ for i, vertices in enumerate(listaVertices, start=1):
     polig = plg.Poligono(vertices)
 
     triangulos = polig.earClipping()
-    polig.dibujarTriangulacion(triangulos, carpeta="resultados/parte3", nombre_archivo=nombre_archivo, enseñar=False,guardar=True)
+    polig.dibujarTriangulacion(triangulos, carpeta="resultados/parte3", nombre_archivo=nombre_archivo, guardar=True, enseñar=False)
     

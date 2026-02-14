@@ -31,86 +31,7 @@ class Poligono:
         pts_str = ", ".join([str(i) for i in self.vertices])
         return f"POLIGONO({self.n})\n{pts_str}\n"
     
-    def dibujar(self):
-        """
-        Algoritmo que dibujará el polígono en una ventana.
-        """
-        xs = [p[0] for p in self.vertices]
-        ys = [p[1] for p in self.vertices]
-        plt.scatter(xs, ys, color='blue', label='Puntos')
-        
-        lineas = self.vertices.copy()
-        lineas.append(lineas[0])
-
-        cx = [p[0] for p in lineas]
-        cy = [p[1] for p in lineas]
-
-        plt.plot(cx, cy, color='green', linewidth=2, label='')
-        plt.show()
-
-    def dibujarConPunto(self, punto, dentro, carpeta="", nombre_archivo="", guardar=False, enseñar=True):
-        """
-        Algoritmo que dibujará el polígono y el punto en una ventana.
-
-        :param punto: punto que se dibujará
-        :param dentro: booleano que dará la información de que si el punto está o no dentro del poligono
-        """
-
-        nombre_archivo = nombre_archivo + ".png"
-
-        # Crear la carpeta si no existe
-        if(guardar):
-            os.makedirs(carpeta, exist_ok=True)
-
-        xs = [p[0] for p in self.vertices]
-        ys = [p[1] for p in self.vertices]
-        plt.scatter(xs, ys, color='blue', label='Puntos')
-        
-        lineas = self.vertices.copy()
-        lineas.append(lineas[0])
-
-        cx = [p[0] for p in lineas]
-        cy = [p[1] for p in lineas]
-
-        color = 'green' if dentro else 'red'
-        plt.scatter([punto[0]], [punto[1]], color=color, s=50, label='Punto')
-            
-        plt.plot(cx, cy, color='green', linewidth=2, label='')
-
-        if(guardar):
-            ruta = os.path.join(carpeta, nombre_archivo)
-            plt.savefig(ruta)  
-            plt.close()
-        if enseñar:
-            plt.show()
-
-    def guardarEnPng(self, carpeta, nombre_archivo):
-        """
-        Algoritmo que guardará la imágen (png) del polígono en la carpeta especificada.
-
-        :param carpeta: nombre de la carpeta donde se guardará la imagen.
-        :param nombre_archivo: nombre con el que se guardará el archivo
-        """
-         
-        nombre_archivo = nombre_archivo + ".png"
-
-        # Crear la carpeta si no existe
-        os.makedirs(carpeta, exist_ok=True)
-        
-        xs = [p[0] for p in self.vertices]
-        ys = [p[1] for p in self.vertices]
-        plt.scatter(xs, ys, color='blue', label='Puntos')
-        
-        lineas = self.vertices
-        lineas.append(lineas[0])
-
-        cx = [p[0] for p in lineas]
-        cy = [p[1] for p in lineas]
-
-        plt.plot(cx, cy, color='green', linewidth=2, label='')
-        ruta = os.path.join(carpeta, nombre_archivo)
-        plt.savefig(ruta)  
-        plt.close()
+    #region PARTE 2 - PUNTO EN POLÍGONO
 
     def contiene(self, punto):
         """
@@ -120,34 +41,37 @@ class Poligono:
         :param punto: punto (x, y)
         :return True si el punto está dentro del Polígono
         """
-        cruces = 0
+        
+        cruces = 0 #contador de la cantidad de cruces que ha detectado el rayo
         x, y = punto
-        #pada cada arista del poligono
-        # for i in range(1, self.n):
+        #para cada arista del poligono
         for i in range(self.n):
             x1, y1 = self.vertices[i-1] #en la primera iteracion cogerá el -1, es decir, el ultimo punto
             x2, y2 = self.vertices[i]
-            #Quito las aristas q tienen los dos vertices a la izq del punto (x menor)
+
+            #Detectar y quitar las aristas donde sus dos vértices están a la izquierda del punto a analizar
             if(x1 < x) and (x2 < x):
                 continue
             
-            if (y > y1) != (y > y2): #Todos los q cumplen esto interseccionan a la recta que contiene al rayo
-                #calculo intersección
+            #Todas las aristas que uno de sus vértices está debajo del punto podrán cortar con el rayo
+            if (y > y1) != (y > y2): 
+                #calcular intersección con la fórmula vista en clase
                 interseccion_x = x1 + ((y - y1) * (x2 - x1)) / (y2 - y1)
 
+                #Si el componente x calculado es mayor o igual al x del punto, hay intersección y aumentamos el contador de cruces
                 if interseccion_x >= x:
                     cruces+=1
         
                 #Posibles errores:
-                ## 1. Que el punto esté exactamente sobre una arista horizontal. ahor amismo no se cuenta la interseccion y se marca como FUERA
-                ## 2. Q el punto esté exactamente encima de un vértice. Puede pasar que no cuente el cruce, o que lo cuente 2 veces.
-                ## 3. Q el punto esté sobre una arista vertical.
-                ## 4. Q haya 2 vertices iguales en el poligono (x1,y1) = (x2,y2). interseccion_x = infinito por division por 0
-        return cruces % 2 == 1 #está dentro
+                ## 1. Que el punto esté exactamente sobre una arista horizontal.
+                ## 2. Que el punto esté exactamente encima de un vértice.
+                ## 3. Que el punto esté sobre una arista vertical.
+                ## 4. Que haya 2 vertices iguales en el poligono (x1,y1) = (x2,y2). Si esto ocurre, en el cálculo de interseccion_x, se hará una división por 0
+        return cruces % 2 == 1 #Si la cantidad de cruces es impar, el punto estará dentro del polígono.
     
     def contieneMejorado(self, punto):
         """
-        Algoritmo de Raycasting para determinar si un punto está dentro del poligono
+        Algoritmo mejorado de Raycasting para determinar si un punto está dentro del poligono
         Lanzamos un rayo horizontal hacia la derecha
 
         :param punto: punto (x, y)
@@ -155,17 +79,20 @@ class Poligono:
         """
         cruces = 0
         x, y = punto
-        #para cada arista del poligono
+        
         for i in range(self.n):
-            x1, y1 = self.vertices[i-1] #en la primera iteracion cogerá el -1, es decir, el ultimo punto
+            x1, y1 = self.vertices[i-1] 
             x2, y2 = self.vertices[i]
 
             #Solución del problema 1: punto justo encima de un vértice
+            #Si el punto a analizar se encuentra justo encima de un vértice, ese punto se considerará dentro del polígono
             if (x, y) == (x1, y1) or (x,y) == (x2,y2):
                 return True
 
-            #Solución del problema 2: punto sobre arista
-            if y1 != y2:  # evitar división por cero
+
+            # REPASAR ESTO BIEN!!!
+            #Solución del problema 2 y 4: punto sobre arista y evitar división por cero
+            if y1 != y2:
                 t = (y - y1)/(y2 - y1)
                 if 0 <= t <= 1:
                     interseccion_x = x1 + t * (x2 - x1)
@@ -173,25 +100,90 @@ class Poligono:
                         return True
 
             #Solucion de problema 3: punto sobre arista horizontal
+            #Si la altura del punto y los dos vértices de la arista son iguales, y el componente x está entre los dos vértices,
+            # aceptaremos este punto como dentro del polígono
             if y1 == y2 and y == y1 and min(x1,x2) <= x <= max(x1,x2):
                 return True
            
-            #Quito las aristas q tienen los dos vertices a la izq del punto
-            # ¿Intersecciona la arista con el rayo?
-            if(x1 < x) and (x2 < x): #si la arista esta a la izq de mi punto, no tener en cuenta y no hacer nada
+            if(x1 < x) and (x2 < x):
                 continue
             
-            if (y > y1) != (y > y2): #Todos los q cumplen esto interseccionan a la recta que contiene al rayo
-                #calculo intersección
-                #ver si la x (coordenada x de la interseccion) corta con la direccion del rayo (a la derecha). 
-                
+            if (y > y1) != (y > y2): 
                 interseccion_x = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
 
                 if interseccion_x >= x:
                     cruces+=1
         
-        return cruces % 2 == 1 #está dentro
+        return cruces % 2 == 1 
     
+    #region PARTE 3 - TRIANGULACIÓN
+
+    def earClipping(self):
+        listaVertices = self.vertices.copy()
+        T = []
+        while len(listaVertices)>3:
+            for index in range(len(listaVertices)):
+                v_i = listaVertices[index]
+                v_prev = listaVertices[(index-1)%len(listaVertices)]
+                v_next = listaVertices[(index+1)%len(listaVertices)]
+                if(ccw(v_prev, v_i, v_next)):
+                    if not Poligono.hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
+                        #Se ha encontrado una oreja
+                        T.append([v_prev, v_i, v_next])
+                        listaVertices.remove(v_i)
+                        break
+        T.append([listaVertices[0], listaVertices[1], listaVertices[2]])
+        return T
+
+    def hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
+        for v in listaVertices:
+            # Ignorar los vértices del propio triángulo
+            if v == v_prev or v == v_i or v == v_next:
+                continue
+
+            # Comprobar si v está dentro del triángulo
+            if (ccw(v_prev, v_i, v) and
+                ccw(v_i, v_next, v) and
+                ccw(v_next, v_prev, v)):
+                return True  # Hay un vértice dentro
+
+        return False
+
+    #region PARTE 4 - ÁREA
+
+    def calcularArea(self, triangulos):
+        """
+        Algoritmo que calculará el area total de una secuencia de triángulos
+
+        :param triangulos: lista de triángulos, donde cada triángulo tendrá 3 vértices
+        :return area total de los triángulos
+        """
+        area = 0 #variable de guardará la suma de los areas de los triángulos
+        for triangulo in triangulos:
+            a, b, c = triangulo #obtener los 3 vértices del triángulo
+            area += Poligono.calcularAreaTriangulo(a, b, c) #Calcular el area de un triángulo
+        return area
+    
+    def calcularAreaTriangulo(punto1, punto2, punto3):
+        """
+        Algoritmo que calculará el area total de un triángulo
+
+        :param punto1, punto2, punto3: los 3 vértices del triángulo
+        :return area del triángulo
+        """
+        punto1 = np.array(punto1)
+        punto2 = np.array(punto2)
+        punto3 = np.array(punto3)
+
+        #obtener los vectores u y v 
+        vectorU = [punto2[0] - punto1[0], punto2[1] - punto1[1]] 
+        vectorV = [punto3[0] - punto1[0], punto3[1] - punto1[1]] 
+
+        #calcular el area a través del producto vectorial de u y v, y dividirlo entre 2
+        return abs(np.cross(vectorU, vectorV)) / 2
+
+    #region PARTE 5A - ENVOLVENTE CONVEXA: JARVIS 
+
     def envolventeConvexaJarvis(self):
         """
         Algoritmo que encontrará la envolvente convexa utilizando la técnica de Jarvis.
@@ -271,6 +263,8 @@ class Poligono:
         # return envConv
         poligonoRet= Poligono([vertices_unicos[i] for i in envConv])
         return poligonoRet
+
+    #region PARTE 5B - ENVOLVENTE CONVEXA: GRAHAM 
 
     def envolventeConvexaGraham(self):
         """
@@ -358,11 +352,103 @@ class Poligono:
         # return [self.vertices.index(p) for p in L]
         return poligonoRet
 
+    
+    ######################### FUNCIONES DE DIBUJADO #########################
+    
+    def dibujar(self):
+        """
+        Algoritmo que dibujará el polígono en una ventana.
+        """
+        xs = [p[0] for p in self.vertices]
+        ys = [p[1] for p in self.vertices]
+        plt.scatter(xs, ys, color='blue', label='Puntos')
+        
+        lineas = self.vertices.copy()
+        lineas.append(lineas[0])
+
+        cx = [p[0] for p in lineas]
+        cy = [p[1] for p in lineas]
+
+        plt.plot(cx, cy, color='green', linewidth=2, label='')
+        plt.show()
+
+    def dibujarConPunto(self, punto, dentro, carpeta="", nombre_archivo="", guardar=False, enseñar=True):
+        """
+        Algoritmo que dibujará el polígono y el punto en una ventana.
+
+        :param punto: punto que se dibujará
+        :param dentro: booleano que dará la información de que si el punto está o no dentro del poligono
+        :param carpeta: nombre de la carpeta donde se guardará la imagen.
+        :param nombre_archivo: nombre con el que se guardará el archivo
+        :param guardar: booleano que indicará si se guardará la imagen o no
+        :param enseñar: booleano que indicará si se mostrará la imagen en una ventana o no
+        """
+
+        nombre_archivo = nombre_archivo + ".png"
+
+        # Crear la carpeta si no existe
+        if(guardar):
+            os.makedirs(carpeta, exist_ok=True)
+
+        xs = [p[0] for p in self.vertices]
+        ys = [p[1] for p in self.vertices]
+        plt.scatter(xs, ys, color='blue', label='Puntos')
+        
+        lineas = self.vertices.copy()
+        lineas.append(lineas[0])
+
+        cx = [p[0] for p in lineas]
+        cy = [p[1] for p in lineas]
+
+        color = 'green' if dentro else 'red'
+        plt.scatter([punto[0]], [punto[1]], color=color, s=50, label='Punto')
+            
+        plt.plot(cx, cy, color='green', linewidth=2, label='')
+
+        if(guardar):
+            ruta = os.path.join(carpeta, nombre_archivo)
+            plt.savefig(ruta)  
+            plt.close()
+        if enseñar:
+            plt.show()
+    
+    def guardarEnPng(self, carpeta, nombre_archivo):
+        """
+        Algoritmo que guardará la imágen (png) del polígono en la carpeta especificada.
+
+        :param carpeta: nombre de la carpeta donde se guardará la imagen.
+        :param nombre_archivo: nombre con el que se guardará el archivo
+        """
+         
+        nombre_archivo = nombre_archivo + ".png"
+
+        # Crear la carpeta si no existe
+        os.makedirs(carpeta, exist_ok=True)
+        
+        xs = [p[0] for p in self.vertices]
+        ys = [p[1] for p in self.vertices]
+        plt.scatter(xs, ys, color='blue', label='Puntos')
+        
+        lineas = self.vertices
+        lineas.append(lineas[0])
+
+        cx = [p[0] for p in lineas]
+        cy = [p[1] for p in lineas]
+
+        plt.plot(cx, cy, color='green', linewidth=2, label='')
+        ruta = os.path.join(carpeta, nombre_archivo)
+        plt.savefig(ruta)  
+        plt.close()
+
     def dibujarEnvolventeConvexa(self, envolvente_poligono, carpeta="", nombre_archivo="", guardar=False, enseñar=True):
         """
         Algoritmo que dibujará el polígono con su envolvente convexa
 
         :param envolvente_poligono: polígono que representa la envolvente convexa.
+        :param carpeta: nombre de la carpeta donde se guardará la imagen.
+        :param nombre_archivo: nombre con el que se guardará el archivo
+        :param guardar: booleano que indicará si se guardará la imagen o no
+        :param enseñar: booleano que indicará si se mostrará la imagen en una ventana o no
         """
         
         nombre_archivo = nombre_archivo + ".png"
@@ -417,39 +503,16 @@ class Poligono:
         if enseñar:
             plt.show()
 
-    def earClipping(self):
-        listaVertices = self.vertices.copy()
-        T = []
-        while len(listaVertices)>3:
-            for index in range(len(listaVertices)):
-                v_i = listaVertices[index]
-                v_prev = listaVertices[(index-1)%len(listaVertices)]
-                v_next = listaVertices[(index+1)%len(listaVertices)]
-                if(ccw(v_prev, v_i, v_next)):
-                    if not Poligono.hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
-                        #Se ha encontrado una oreja
-                        T.append([v_prev, v_i, v_next])
-                        listaVertices.remove(v_i)
-                        break
-        T.append([listaVertices[0], listaVertices[1], listaVertices[2]])
-        return T
+    def dibujarTriangulacion(self, triangulos, carpeta, nombre_archivo, guardar=False, enseñar=True ):
+        """
+        Algoritmo que dibujará el polígono con su triangulación
 
-    def hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
-        for v in listaVertices:
-            # Ignorar los vértices del propio triángulo
-            if v == v_prev or v == v_i or v == v_next:
-                continue
-
-            # Comprobar si v está dentro del triángulo
-            if (ccw(v_prev, v_i, v) and
-                ccw(v_i, v_next, v) and
-                ccw(v_next, v_prev, v)):
-                return True  # Hay un vértice dentro
-
-        return False
-
-    def dibujarTriangulacion(self, triangulos, carpeta, nombre_archivo, enseñar=True, guardar=False):
-        
+        :param triangulos: lista de triángulos que forman la triangulación.
+        :param carpeta: nombre de la carpeta donde se guardará la imagen.
+        :param nombre_archivo: nombre con el que se guardará el archivo
+        :param guardar: booleano que indicará si se guardará la imagen o no
+        :param enseñar: booleano que indicará si se mostrará la imagen en una ventana o no
+        """
             
         nombre_archivo = nombre_archivo + ".png"
 
@@ -486,30 +549,14 @@ class Poligono:
             plt.savefig(ruta)  
             plt.close()
 
-    def calcularArea(self, triangulos):
-        area = 0
-        for triangulo in triangulos:
-            a, b, c = triangulo
-            area += Poligono.calcularAreaTriangulo(a, b, c)
-        return area
-    
-    def calcularAreaTriangulo(punto1, punto2, punto3):
-        punto1 = np.array(punto1)
-        punto2 = np.array(punto2)
-        punto3 = np.array(punto3)
-
-        vectorU = [punto2[0] - punto1[0], punto2[1] - punto1[1]] #el del final menos el primero. Pensar que punto1 es 0,0
-        vectorV = [punto3[0] - punto1[0], punto3[1] - punto1[1]] #el del final menos el primero. Pensar que punto1 es 0,0
-
-        return abs(np.cross(vectorU, vectorV)) / 2
 
 
 def cargar_interesting_figure_archive(carpeta):
     """
-    Algoritmo que devuelve la lista de vertices de las figuras de Interesting Figure Archive.
+    Algoritmo que devuelve la lista de figuras de los polígonos de Interesting Figure Archive.
 
     :param carpeta: ruta de la carpeta que contiene los jsons.
-    :return vertices: lista de vertices de las figuras, donde cada posici´n tendrá la información de cada figura.
+    :return figuras: lista de figuras con 2 subobjetos: nombre y vertices.
     """
 
     figuras = []
@@ -552,25 +599,39 @@ def ccw(punto1, punto2, punto3):
         return np.dot(punto2 - punto1, punto2 - punto1) > np.dot(punto3 - punto1, punto3 - punto1) #coger el punto mas lejano
     return False
 
-
 def guardarListaFiguras(listaFiguras, ruta_archivo):
-    # Convertir tuplas a listas
-    data = [
-        {
+    """
+    Algoritmo que recibiendo la lista de figuras y el nombre de la ruta, guarda su información en json que se utilizará en los ejercicios
+
+    :param listaFiguras: lista de figuras a guardar
+    :param ruta_archivo: ruta del archivo donde se debe guardar la información
+    """
+    #Por cada figura guardar su nombre y vertices en un diccionario
+    data=[]
+    for figura in listaFiguras:
+        data.append({
             "nombre": figura["nombre"],
             "vertices": [list(v) for v in figura["vertices"]]
-        }
-        for figura in listaFiguras
-    ]
+        })
+    
 
-    # Crear carpeta si no existe
+    #crear directorio si no existe
     os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
 
+    #volcar los datos en un json
     with open(ruta_archivo, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-
 def cargarListaVertices(ruta_archivo):
+    """
+    Algoritmo que recibiendo la ruta de un archivo json con información de figuras, devuelve las listas de vértices y nombres.
+
+    :param ruta_archivo: ruta del archivo json con la información de las figuras
+    :return vertices: lista de listas de vértices, donde cada sublista corresponde a una figura
+    :return nombres: lista de nombres de las figuras, donde cada nombre corresponde a una figura
+    """
+
+    #abrir archivo y cargar su información
     with open(ruta_archivo, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -578,15 +639,16 @@ def cargarListaVertices(ruta_archivo):
     nombres = []
     
     for figura in data:
-        # Convertir cada vértice a tupla
+        #Convertir cada vértice a tupla
         vertices.append([tuple(v) for v in figura["vertices"]])
         nombres.append(figura["nombre"])
 
     return vertices, nombres
 
 
-listaFiguras = cargar_interesting_figure_archive("./figures")
 
+#region PARTE 1: cargar y guardar los polígonos
+listaFiguras = cargar_interesting_figure_archive("./figures")
 guardarListaFiguras(listaFiguras, "helpers/verticesFiguras.json")
 
 for i, figura in enumerate(listaFiguras, start=1):
