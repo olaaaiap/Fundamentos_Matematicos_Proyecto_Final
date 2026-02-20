@@ -20,7 +20,6 @@ import json
 # eso tendriamos que contarlo como 1, no como 2
 # mirar los libros de la bibliografia, el segundo libro tiene los algoritmos online.
 
-##########CUIDADO!!!!! REPASAR SI TIENE QUE SER < O <= (> O >=)
 class Poligono:
     def __init__(self, vertices, name=""):
         self.vertices = vertices
@@ -61,12 +60,6 @@ class Poligono:
                 #Si el componente x calculado es mayor o igual al x del punto, hay intersección y aumentamos el contador de cruces
                 if interseccion_x >= x:
                     cruces+=1
-        
-                #Posibles errores:
-                ## 1. Que el punto esté exactamente sobre una arista horizontal.
-                ## 2. Que el punto esté exactamente encima de un vértice.
-                ## 3. Que el punto esté sobre una arista vertical.
-                ## 4. Que haya 2 vertices iguales en el poligono (x1,y1) = (x2,y2). Si esto ocurre, en el cálculo de interseccion_x, se hará una división por 0
         return cruces % 2 == 1 #Si la cantidad de cruces es impar, el punto estará dentro del polígono.
     
     def contieneMejorado(self, punto):
@@ -74,9 +67,17 @@ class Poligono:
         Algoritmo mejorado de Raycasting para determinar si un punto está dentro del poligono
         Lanzamos un rayo horizontal hacia la derecha
 
+        https://notes.suhaib.in/docs/code/geometry/theory/check-if-a-point-belongs-to-a-polygon/
+
         :param punto: punto (x, y)
         :return True si el punto está dentro del Polígono
         """
+        
+        ## Casos controlados:
+        ## 1. Que el punto esté exactamente sobre una arista.
+        ## 2. Que el punto esté exactamente encima de un vértice.
+       
+
         cruces = 0
         x, y = punto
         
@@ -84,30 +85,32 @@ class Poligono:
             x1, y1 = self.vertices[i-1] 
             x2, y2 = self.vertices[i]
 
-            #Solución del problema 1: punto justo encima de un vértice
+            #Solución del problema 1: punto justo sobre una arista
+            epsilon = 1e-9 #Para controlar errores de coma flotante
+
+            vectorU = [x2 - x1, y2 - y1]
+            vectorV = [x - x1, y - y1]
+
+            cross_product = np.cross(vectorU, vectorV)
+
+            #Si el punto está muy cerca de la arista
+            if abs(cross_product) <= epsilon:
+                #comprobar si el punto está dentro del segmento
+                if min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2):
+                    return True
+                
+
+            #Solución del problema 2: punto justo encima de un vértice
             #Si el punto a analizar se encuentra justo encima de un vértice, ese punto se considerará dentro del polígono
             if (x, y) == (x1, y1) or (x,y) == (x2,y2):
                 return True
 
-
-            # REPASAR ESTO BIEN!!!
-            #Solución del problema 2 y 4: punto sobre arista y evitar división por cero
-            if y1 != y2:
-                t = (y - y1)/(y2 - y1)
-                if 0 <= t <= 1:
-                    interseccion_x = x1 + t * (x2 - x1)
-                    if abs(interseccion_x - x) < 1e-9:
-                        return True
-
-            #Solucion de problema 3: punto sobre arista horizontal
-            #Si la altura del punto y los dos vértices de la arista son iguales, y el componente x está entre los dos vértices,
-            # aceptaremos este punto como dentro del polígono
-            if y1 == y2 and y == y1 and min(x1,x2) <= x <= max(x1,x2):
-                return True
-           
+            #Si los dos vértices de la arista están a la izquierda del punto, el rayo no podrá cortarla
             if(x1 < x) and (x2 < x):
                 continue
             
+            #Todas las aristas que uno de sus vértices está debajo del punto podrán cortar con el rayo
+            #Así evitamos que si el rayo pasa justo por un vértice, se cuente como 2 cruces
             if (y > y1) != (y > y2): 
                 interseccion_x = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
 
@@ -119,33 +122,45 @@ class Poligono:
     #region PARTE 3 - TRIANGULACIÓN
 
     def earClipping(self):
+        """
+        Algoritmo que encontrará la triangulación de un polígono utilizando la técnica de Ear Clipping.
+
+        :return lista de triángulos, donde cada triángulo tendrá 3 vértices
+        """
         listaVertices = self.vertices.copy()
         T = []
-        while len(listaVertices)>3:
+        while len(listaVertices)>3: #buscamos orejas mientras haya más de 3 vértices
+            #Para cada vértice, comprobamos si forma una oreja con sus vecinos.
             for index in range(len(listaVertices)):
                 v_i = listaVertices[index]
                 v_prev = listaVertices[(index-1)%len(listaVertices)]
                 v_next = listaVertices[(index+1)%len(listaVertices)]
                 if(ccw(v_prev, v_i, v_next)):
+                    #Verificamos que no haya ningún otro vértice dentro de este triángulo
                     if not Poligono.hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
                         #Se ha encontrado una oreja
                         T.append([v_prev, v_i, v_next])
-                        listaVertices.remove(v_i)
+                        listaVertices.remove(v_i) #eliminamos el vértice de la oreja encontrado, y seguimos buscando más orejas
                         break
+        #cuando queden 3 vértices, añadirlos a la lista de triángulos y terminar
         T.append([listaVertices[0], listaVertices[1], listaVertices[2]])
         return T
 
     def hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
+        """
+        Algoritmo que comprobará si hay algún vértice dentro del triángulo formado por v_prev, v_i y v_next
+
+        :return True si hay un vértice dentro del triángulo, False si no lo hay
+        """
         for v in listaVertices:
-            # Ignorar los vértices del propio triángulo
+            #Ignorar los vértices del propio triángulo
             if v == v_prev or v == v_i or v == v_next:
                 continue
 
             # Comprobar si v está dentro del triángulo
-            if (ccw(v_prev, v_i, v) and
-                ccw(v_i, v_next, v) and
-                ccw(v_next, v_prev, v)):
-                return True  # Hay un vértice dentro
+            # v está dentro si está a la izquierda de cada lado del triángulo
+            if (ccw(v_prev, v_i, v) and ccw(v_i, v_next, v) and ccw(v_next, v_prev, v)):
+                return True  #Hay un vértice dentro
 
         return False
 
@@ -188,7 +203,7 @@ class Poligono:
         """
         Algoritmo que encontrará la envolvente convexa utilizando la técnica de Jarvis.
         
-        :return: lista de indices de las vértices que son parte de la envolvente convexa.
+        :return: polígono de la envolvente convexa.
         """
 
         envConv = []
@@ -196,26 +211,29 @@ class Poligono:
         p1 = min(self.vertices)
         indexP1 = self.vertices.index(p1)
         
+        #guardar ese punto en la envolvente convexa
         pHelper = indexP1
 
         while (True):
             envConv.append(pHelper)
 
+            #Coger el siguiente punto en la lista. Si llega al final de la lista, volverá al inicio
             p2 = (pHelper + 1) % len(self.vertices) 
 
             for i in range(len(self.vertices)):
-                if i == pHelper:
+                if i == pHelper: #Si el punto a analizar es el mismo que el punto de referencia, no lo analizamos
                     continue
-                if ccw(self.vertices[pHelper], self.vertices[i], self.vertices[p2]):
+                #Si el giro pHelper, i, p2 es en sentido antihorario, entonces el punto i es un mejor candidato que p2
+                if ccw(self.vertices[pHelper], self.vertices[i], self.vertices[p2]): 
                     p2 = i
 
-            pHelper = p2
+            pHelper = p2 #asignar a pHelper el mejor punto encontrado, y añadirlo a la envolvente convexa
 
-
+            #Si llegamos al inicio de la envolvente convexa, terminar
             if(pHelper==indexP1):
                 break
         
-        # return envConv
+        #Crear el polígono con la envolvente convexa
         poligonoRet= Poligono([self.vertices[i] for i in envConv])
         return poligonoRet
 
@@ -223,18 +241,54 @@ class Poligono:
         """
         Algoritmo mejorado que encontrará la envolvente convexa utilizando la técnica de Jarvis.
         
-        :return: lista de indices de las vértices que son parte de la envolvente convexa.
+        :return: polígono de la envolvente convexa.
         """
         ##Casos controlados:
         ##  1. Que haya puntos duplicados en la lista de vertices
-        ##  2. Casos donde el poligono tiene menos de 3 vertices
+        ##  2. Que el polígono tenga 3 o menos vértices
         
         #Si tiene menos de 3 vertices, devolver tal cual
         if len(self.vertices) <= 3:
             return Poligono(self.vertices)    
               
-        ## Eliminar duplicados
-        vertices_unicos = list(dict.fromkeys(self.vertices))
+        #Eliminar duplicados
+        vertices_unicos = []
+        for v in self.vertices:
+            if v not in vertices_unicos:
+                vertices_unicos.append(v)
+
+
+        envConv = []
+        #encontrar punto más a la izquierda
+        p1 = min(vertices_unicos)
+        indexP1 = vertices_unicos.index(p1)
+        
+        #guardar ese punto en la envolvente convexa
+        pHelper = indexP1
+
+        while (True):
+            envConv.append(pHelper)
+
+            #Coger el siguiente punto en la lista. Si llega al final de la lista, volverá al inicio
+            p2 = (pHelper + 1) % len(vertices_unicos) 
+
+            for i in range(len(vertices_unicos)):
+                if i == pHelper: #Si el punto a analizar es el mismo que el punto de referencia, no lo analizamos
+                    continue
+                #Si el giro pHelper, i, p2 es en sentido antihorario, entonces el punto i es un mejor candidato que p2
+                if ccw(vertices_unicos[pHelper], vertices_unicos[i], vertices_unicos[p2]): 
+                    p2 = i
+
+            pHelper = p2 #asignar a pHelper el mejor punto encontrado, y añadirlo a la envolvente convexa
+
+            #Si llegamos al inicio de la envolvente convexa, terminar
+            if(pHelper==indexP1):
+                break
+        
+        #Crear el polígono con la envolvente convexa
+        poligonoRet= Poligono([vertices_unicos[i] for i in envConv])
+        return poligonoRet
+    
 
         envConv = []
         #encontrar punto más a la izquierda
@@ -270,10 +324,12 @@ class Poligono:
         """
         Algoritmo que encontrará la envolvente convexa utilizando la técnica de Graham.
         
-        :return: lista de indices de las vértices que son parte de la envolvente convexa.
+        :return: polígono de la envolvente convexa.
         """
+
         #Ordenar los puntos por la coordenada x
         puntos_ordenados = sorted(self.vertices)
+
         #Poner los puntos p1 y p2 en una lista L_upper, donde p1 es el primer punto
         p1= puntos_ordenados[0]
         p2= puntos_ordenados[1]
@@ -281,16 +337,19 @@ class Poligono:
 
         for i in range (2, len(puntos_ordenados)):
             L_upper.append(puntos_ordenados[i])
+            #mientras que L_upper contenga más de 2 puntos y los últimos 3 puntos de L_upper no formen un giro en sentido antihorario...
             while (len(L_upper) > 2 and not ccw(L_upper[-3], L_upper[-2], L_upper[-1])):
-                L_upper.pop(-2) 
+                L_upper.pop(-2) #... eliminar el punto del medio
 
         #poner los puntos pn y pn-1 en una lista L_lower donde pn es el primer punto
         L_lower = [puntos_ordenados[-1],puntos_ordenados[-2]]
 
+        #para cada punto desde el penúltimo hasta el primero
         for i in reversed(range(len(puntos_ordenados) - 2)):
             L_lower.append(puntos_ordenados[i])
+            #mientras que L_lower contenga más de 2 puntos y los últimos 3 puntos de L_lower no formen un giro en sentido antihorario...
             while (len(L_lower)>2 and not ccw(L_lower[-3], L_lower[-2], L_lower[-1])):
-                L_lower.pop(-2)
+                L_lower.pop(-2) #... eliminar el punto del medio
         
         #quitar el primer y ultimo punto de L_lower para evitar vertices duplicados
         L_lower.pop(-1)
@@ -300,29 +359,32 @@ class Poligono:
         L = L_upper + L_lower
 
         poligonoRet = Poligono(L)
-        # return [self.vertices.index(p) for p in L]
         return poligonoRet
     
     def envolventeConvexaGrahamMejorado(self):
         """
         Algoritmo mejorado que encontrará la envolvente convexa utilizando la técnica de Graham.
         
-        :return: lista de indices de las vértices que son parte de la envolvente convexa.
+        :return: polígono de la envolvente convexa.
         """
 
         ##Casos controlados:
         ##  1. Que haya puntos duplicados en la lista de vertices
-        ##  2. Casos donde el poligono tiene menos de 3 vertices
+        ##  2. Que el polígono tenga 3 o menos vértices
         
         #Si tiene menos de 3 vertices, devolver tal cual
         if len(self.vertices) <= 3:
             return Poligono(self.vertices)    
               
-        ## Eliminar duplicados
-        vertices_unicos = list(dict.fromkeys(self.vertices))
+        #Eliminar duplicados
+        vertices_unicos = []
+        for v in self.vertices:
+            if v not in vertices_unicos:
+                vertices_unicos.append(v)
 
         #Ordenar los puntos por la coordenada x
         puntos_ordenados = sorted(vertices_unicos)
+
         #Poner los puntos p1 y p2 en una lista L_upper, donde p1 es el primer punto
         p1= puntos_ordenados[0]
         p2= puntos_ordenados[1]
@@ -330,16 +392,19 @@ class Poligono:
 
         for i in range (2, len(puntos_ordenados)):
             L_upper.append(puntos_ordenados[i])
+            #mientras que L_upper contenga más de 2 puntos y los últimos 3 puntos de L_upper no formen un giro en sentido antihorario...
             while (len(L_upper) > 2 and not ccw(L_upper[-3], L_upper[-2], L_upper[-1])):
-                L_upper.pop(-2) 
+                L_upper.pop(-2) #... eliminar el punto del medio
 
         #poner los puntos pn y pn-1 en una lista L_lower donde pn es el primer punto
         L_lower = [puntos_ordenados[-1],puntos_ordenados[-2]]
 
+        #para cada punto desde el penúltimo hasta el primero
         for i in reversed(range(len(puntos_ordenados) - 2)):
             L_lower.append(puntos_ordenados[i])
+            #mientras que L_lower contenga más de 2 puntos y los últimos 3 puntos de L_lower no formen un giro en sentido antihorario...
             while (len(L_lower)>2 and not ccw(L_lower[-3], L_lower[-2], L_lower[-1])):
-                L_lower.pop(-2)
+                L_lower.pop(-2) #... eliminar el punto del medio
         
         #quitar el primer y ultimo punto de L_lower para evitar vertices duplicados
         L_lower.pop(-1)
@@ -349,28 +414,33 @@ class Poligono:
         L = L_upper + L_lower
 
         poligonoRet = Poligono(L)
-        # return [self.vertices.index(p) for p in L]
         return poligonoRet
 
     
     ######################### FUNCIONES DE DIBUJADO #########################
     
-    def dibujar(self):
+    def dibujar(self, carpeta="", nombre_archivo="", guardar=False, enseñar=True):
         """
         Algoritmo que dibujará el polígono en una ventana.
         """
         xs = [p[0] for p in self.vertices]
         ys = [p[1] for p in self.vertices]
-        plt.scatter(xs, ys, color='blue', label='Puntos')
+        plt.scatter(xs, ys, color='blue', label='Puntos') #pintar los vértices
         
-        lineas = self.vertices.copy()
-        lineas.append(lineas[0])
+        lineas = self.vertices.copy() #hacer copia de los vertices para no cambiar el original
+        lineas.append(lineas[0]) #añadimos el primer vértice para cerrar el polígono
 
         cx = [p[0] for p in lineas]
         cy = [p[1] for p in lineas]
 
-        plt.plot(cx, cy, color='green', linewidth=2, label='')
-        plt.show()
+        plt.plot(cx, cy, color='green', linewidth=2, label='') #pintar las aristas
+
+        if guardar: #guardar el png en la carpeta especificada
+            ruta = os.path.join(carpeta, nombre_archivo)
+            plt.savefig(ruta)  
+            plt.close()
+        if enseñar:
+            plt.show()
 
     def dibujarConPunto(self, punto, dentro, carpeta="", nombre_archivo="", guardar=False, enseñar=True):
         """
@@ -392,54 +462,26 @@ class Poligono:
 
         xs = [p[0] for p in self.vertices]
         ys = [p[1] for p in self.vertices]
-        plt.scatter(xs, ys, color='blue', label='Puntos')
+        plt.scatter(xs, ys, color='blue', label='') #pintar los vértices
         
-        lineas = self.vertices.copy()
-        lineas.append(lineas[0])
+        lineas = self.vertices.copy() #hacer copia de los vertices para no cambiar el original
+        lineas.append(lineas[0]) #añadimos el primer vértice para cerrar el polígono
 
         cx = [p[0] for p in lineas]
         cy = [p[1] for p in lineas]
 
-        color = 'green' if dentro else 'red'
+        color = 'green' if dentro else 'red' #si el punto está dentro del polígono, pintar de verde, si no, de rojo
         plt.scatter([punto[0]], [punto[1]], color=color, s=50, label='Punto')
             
-        plt.plot(cx, cy, color='green', linewidth=2, label='')
+        plt.plot(cx, cy, color='green', linewidth=2, label='') #pintar las aristas
 
-        if(guardar):
+        if guardar: #guardar el png en la carpeta especificada
             ruta = os.path.join(carpeta, nombre_archivo)
             plt.savefig(ruta)  
             plt.close()
         if enseñar:
             plt.show()
     
-    def guardarEnPng(self, carpeta, nombre_archivo):
-        """
-        Algoritmo que guardará la imágen (png) del polígono en la carpeta especificada.
-
-        :param carpeta: nombre de la carpeta donde se guardará la imagen.
-        :param nombre_archivo: nombre con el que se guardará el archivo
-        """
-         
-        nombre_archivo = nombre_archivo + ".png"
-
-        # Crear la carpeta si no existe
-        os.makedirs(carpeta, exist_ok=True)
-        
-        xs = [p[0] for p in self.vertices]
-        ys = [p[1] for p in self.vertices]
-        plt.scatter(xs, ys, color='blue', label='Puntos')
-        
-        lineas = self.vertices
-        lineas.append(lineas[0])
-
-        cx = [p[0] for p in lineas]
-        cy = [p[1] for p in lineas]
-
-        plt.plot(cx, cy, color='green', linewidth=2, label='')
-        ruta = os.path.join(carpeta, nombre_archivo)
-        plt.savefig(ruta)  
-        plt.close()
-
     def dibujarEnvolventeConvexa(self, envolvente_poligono, carpeta="", nombre_archivo="", guardar=False, enseñar=True):
         """
         Algoritmo que dibujará el polígono con su envolvente convexa
@@ -453,49 +495,55 @@ class Poligono:
         
         nombre_archivo = nombre_archivo + ".png"
 
-        # Crear la carpeta si no existe
+        #Crear la carpeta si no existe
         if(guardar):
             os.makedirs(carpeta, exist_ok=True)
 
 
-        # Índices de los puntos que NO están en la envolvente
+        #Guardar los índices de la env. convexa para pintar esos vértices de un color diferente
         envolvente_indices = [self.vertices.index(v) for v in envolvente_poligono.vertices]
         indices_envolvente = set(envolvente_indices)
-        indices_restantes = [i for i in range(len(self.vertices)) if i not in indices_envolvente]
 
-        # Puntos de la envolvente convexa (azul)
+        #Guardar los restantes
+        indices_restantes = []
+        for i in range(len(self.vertices)):
+            if i not in indices_envolvente:
+                indices_restantes.append(i)
+        
+        #Dibujar los puntos de la env. convexa en azul
         xs_env = [self.vertices[i][0] for i in envolvente_indices]
         ys_env = [self.vertices[i][1] for i in envolvente_indices]
         plt.scatter(xs_env, ys_env, color='blue', label='Puntos envolvente')
 
-        # Resto de puntos (por ejemplo morado)
+        #Dibujar los demás puntos en morado
         xs_rest = [self.vertices[i][0] for i in indices_restantes]
         ys_rest = [self.vertices[i][1] for i in indices_restantes]
         plt.scatter(xs_rest, ys_rest, color='purple', label='Otros puntos')
         
         lineas = self.vertices.copy()
-        lineas.append(lineas[0])
+        lineas.append(lineas[0]) #Añadir el primer vértice
 
         cx = [p[0] for p in lineas]
         cy = [p[1] for p in lineas]
 
-        plt.plot(cx, cy, color='green', linewidth=2, label='')
+        plt.plot(cx, cy, color='green', linewidth=2, label='') #dibujar las aristas
 
-        # Dibujar la envolvente convexa
+        #dibujar las aristas de la envolvente convexa en rojo
         convexa = [self.vertices[i] for i in envolvente_indices]
-        convexa.append(convexa[0])  # cerrar la envolvente
+        convexa.append(convexa[0])
 
         cx = [p[0] for p in convexa]
         cy = [p[1] for p in convexa]
 
         plt.plot(cx, cy, color='red', linewidth=2, label='Envolvente convexa')
 
+        #añadir etiquetas a los vértices de la envolvente convexa
         for (x, y) in convexa:
             plt.text(x + 0.05, y + 0.05, f"({x}, {y})", fontsize=9)
 
         plt.axis('equal')
         plt.legend()
-        plt.title('Polígono y Envolvente Convexa (Jarvis)')
+        plt.title('Polígono y Envolvente Convexa')
         if(guardar):
             ruta = os.path.join(carpeta, nombre_archivo)
             plt.savefig(ruta)  
@@ -520,16 +568,18 @@ class Poligono:
             # Crear la carpeta si no existe
             os.makedirs(carpeta, exist_ok=True)
 
-        # Polígono original
-        xs = [p[0] for p in self.vertices] + [self.vertices[0][0]]
-        ys = [p[1] for p in self.vertices] + [self.vertices[0][1]]
+        #Dibujar el polígono original
+        lineas = self.vertices.copy() #hacer copia de los vertices para no cambiar el original
+        lineas.append(lineas[0]) #añadimos el primer vértice para cerrar el polígono
 
-        plt.figure()
+        xs = [p[0] for p in lineas]
+        ys = [p[1] for p in lineas]
+
         plt.plot(xs, ys, color='black', linewidth=2, label='Polígono')
 
-        # Dibujar diagonales
+        #Dibujar triangulos
         for tri in triangulos:
-            for i in range(3):
+            for i in range(3): #dibujar cada arista del triángulo
                 p1 = tri[i]
                 p2 = tri[(i + 1) % 3]
                 plt.plot(
@@ -561,6 +611,7 @@ def cargar_interesting_figure_archive(carpeta):
 
     figuras = []
 
+    #leemos cada json de la carpeta y guardamos su nombre y vértices en una lista de figuras
     for archivo in os.listdir(carpeta):
         if archivo.endswith(".json"):
             ruta = os.path.join(carpeta, archivo)
@@ -589,13 +640,16 @@ def ccw(punto1, punto2, punto3):
     punto2 = np.array(punto2)
     punto3 = np.array(punto3)
 
-    vectorU = [punto2[0] - punto1[0], punto2[1] - punto1[1]] #el del final menos el primero. Pensar que punto1 es 0,0
-    vectorV = [punto3[0] - punto1[0], punto3[1] - punto1[1]] #el del final menos el primero. Pensar que punto1 es 0,0
+    vectorU = [punto2[0] - punto1[0], punto2[1] - punto1[1]] #el del final menos el primero.
+    vectorV = [punto3[0] - punto1[0], punto3[1] - punto1[1]] #el del final menos el primero. 
 
+    #calcular el producto vectorial de u y v
     crossProduct = np.cross(vectorU, vectorV)
     if(crossProduct > 0):
         return True
     if(crossProduct == 0): #Los tres puntos están alineados
+        #En este caso el dot product es equivalente a la distancia al cuadrado. 
+        # Por tanto, comparar la distancia al cuadrado entre los puntos nos vale para saber cual está más lejos
         return np.dot(punto2 - punto1, punto2 - punto1) > np.dot(punto3 - punto1, punto3 - punto1) #coger el punto mas lejano
     return False
 
@@ -651,9 +705,10 @@ def cargarListaVertices(ruta_archivo):
 listaFiguras = cargar_interesting_figure_archive("./figures")
 guardarListaFiguras(listaFiguras, "helpers/verticesFiguras.json")
 
+#Guardar cada figura en png
 for i, figura in enumerate(listaFiguras, start=1):
     poligono = Poligono(figura["vertices"], figura["nombre"])
-    poligono.guardarEnPng("resultados/parte1", figura["nombre"])
+    poligono.dibujar("resultados/parte1", figura["nombre"], guardar=True, enseñar=False)
 
 
 
