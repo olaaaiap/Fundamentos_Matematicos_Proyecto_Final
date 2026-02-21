@@ -137,7 +137,7 @@ class Poligono:
                 v_next = listaVertices[(index+1)%len(listaVertices)]
                 if(ccw(v_prev, v_i, v_next)):
                     #Verificamos que no haya ningún otro vértice dentro de este triángulo
-                    if not Poligono.hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
+                    if not Poligono.hayVerticeDentroMejorado(listaVertices, v_prev, v_i, v_next):
                         #Se ha encontrado una oreja
                         T.append([v_prev, v_i, v_next])
                         listaVertices.remove(v_i) #eliminamos el vértice de la oreja encontrado, y seguimos buscando más orejas
@@ -149,6 +149,7 @@ class Poligono:
     def hayVerticeDentro(listaVertices, v_prev, v_i, v_next):
         """
         Algoritmo que comprobará si hay algún vértice dentro del triángulo formado por v_prev, v_i y v_next
+        https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle  -  Triangles area approach
 
         :return True si hay un vértice dentro del triángulo, False si no lo hay
         """
@@ -157,13 +158,38 @@ class Poligono:
             if v == v_prev or v == v_i or v == v_next:
                 continue
 
-            # Comprobar si v está dentro del triángulo
-            # v está dentro si está a la izquierda de cada lado del triángulo
-            if (ccw(v_prev, v_i, v) and ccw(v_i, v_next, v) and ccw(v_next, v_prev, v)):
-                return True  #Hay un vértice dentro
-
+            #calcular area de los 3 triangulos y comparar con el area total del triangulo
+            area_total = Poligono.calcularAreaTriangulo(v_prev, v_i, v_next)
+            area1 = Poligono.calcularAreaTriangulo(v, v_i, v_next)
+            area2 = Poligono.calcularAreaTriangulo(v_prev, v, v_next)
+            area3 = Poligono.calcularAreaTriangulo(v_prev, v_i, v)
+            if abs(area_total - (area1 + area2 + area3)) <= 1e-9: #controlar errores de coma flotante
+                return True #Hay un vértice dentro
+            
         return False
 
+    def hayVerticeDentroMejorado(listaVertices, v_prev, v_i, v_next):
+            """
+            Algoritmo mejorado que comprobará si hay algún vértice dentro del triángulo formado por v_prev, v_i y v_next
+            https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle  -  Orientation approach
+
+
+            :return True si hay un vértice dentro del triángulo, False si no lo hay
+            """
+            # Problema controlado: Si el punto está exactamente en un lado del triángulo o muy cerca del borde puede dar un falso positivo
+            
+            for v in listaVertices:
+                #Ignorar los vértices del propio triángulo
+                if v == v_prev or v == v_i or v == v_next:
+                    continue
+
+                # Comprobar si v está dentro del triángulo
+                # v está dentro si está a la izquierda de cada lado del triángulo
+                if (ccw(v_prev, v_i, v) and ccw(v_i, v_next, v) and ccw(v_next, v_prev, v)):
+                    return True  #Hay un vértice dentro
+
+            return False
+    
     #region PARTE 4 - ÁREA
 
     def calcularArea(self, triangulos):
