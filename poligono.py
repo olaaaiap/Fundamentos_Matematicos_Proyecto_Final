@@ -4,26 +4,9 @@ import matplotlib.pyplot as plt
 import os
 import json
 
-#estructura de datos para guardar un poligono: lista de vertices, matrices... lo mas simple es una lista de tuplas
-
-#Ahora tenemos q crear nuestra funcion "contains". 
-# cuidado si pisa justo los vertices? buscar en la documentacion, 
-# hay metodos. un metodo es mover un poquito el punto 
-# (+0,001 por ejemplo. pero cuidado con cuanto lo movemos pq puede traer errores) 
-# y hacer otra vez el experimento, pero cuidado si esta muy muy cerca del borde.
-#  Otra opcion es lanzar mas de un rayo. 
-# Empezar por implementaciones sencillas. 
-# pensar en que situaciones puede fallar y en cuales funciona. 
-# identificar los casos especiales.
-# en el ejemplo de main.py, un punto corta con unos vertices, 
-# pero 2 de esos se juntan en una arista horizontal, justo donde iria al raycast horizontal. 
-# eso tendriamos que contarlo como 1, no como 2
-# mirar los libros de la bibliografia, el segundo libro tiene los algoritmos online.
-
 class Poligono:
     def __init__(self, vertices, name=""):
         self.vertices = vertices
-        self.n = len(vertices) #cantidad de vertices
         self.name = name
     
     def __repr__(self):
@@ -44,7 +27,7 @@ class Poligono:
         cruces = 0 #contador de la cantidad de cruces que ha detectado el rayo
         x, y = punto
         #para cada arista del poligono
-        for i in range(self.n):
+        for i in range(len(self.vertices)):
             x1, y1 = self.vertices[i-1] #en la primera iteracion cogerá el -1, es decir, el ultimo punto
             x2, y2 = self.vertices[i]
 
@@ -81,7 +64,7 @@ class Poligono:
         cruces = 0
         x, y = punto
         
-        for i in range(self.n):
+        for i in range(len(self.vertices)):
             x1, y1 = self.vertices[i-1] 
             x2, y2 = self.vertices[i]
 
@@ -135,12 +118,12 @@ class Poligono:
                 v_i = listaVertices[index]
                 v_prev = listaVertices[(index-1)%len(listaVertices)]
                 v_next = listaVertices[(index+1)%len(listaVertices)]
-                if(ccw(v_prev, v_i, v_next)):
+                if(esConvexo(v_prev, v_i, v_next)):
                     #Verificamos que no haya ningún otro vértice dentro de este triángulo
                     if not Poligono.hayVerticeDentroMejorado(listaVertices, v_prev, v_i, v_next):
                         #Se ha encontrado una oreja
                         T.append([v_prev, v_i, v_next])
-                        listaVertices.remove(v_i) #eliminamos el vértice de la oreja encontrado, y seguimos buscando más orejas
+                        listaVertices.pop(index) #eliminamos el vértice de la oreja encontrado, y seguimos buscando más orejas
                         break
         #cuando queden 3 vértices, añadirlos a la lista de triángulos y terminar
         T.append([listaVertices[0], listaVertices[1], listaVertices[2]])
@@ -151,6 +134,9 @@ class Poligono:
         Algoritmo que comprobará si hay algún vértice dentro del triángulo formado por v_prev, v_i y v_next
         https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle  -  Triangles area approach
 
+        :param listaVertices: lista de vértices del poligono.
+        :param v_prev, v_i, v_next: vértices del triángulo
+        
         :return True si hay un vértice dentro del triángulo, False si no lo hay
         """
         for v in listaVertices:
@@ -185,10 +171,12 @@ class Poligono:
 
                 # Comprobar si v está dentro del triángulo
                 # v está dentro si está a la izquierda de cada lado del triángulo
-                if (ccw(v_prev, v_i, v) and ccw(v_i, v_next, v) and ccw(v_next, v_prev, v)):
+                if (esConvexo(v_prev, v_i, v) and esConvexo(v_i, v_next, v) and esConvexo(v_next, v_prev, v)):
                     return True  #Hay un vértice dentro
 
             return False
+    
+
     
     #region PARTE 4 - ÁREA
 
@@ -316,33 +304,6 @@ class Poligono:
         return poligonoRet
     
 
-        envConv = []
-        #encontrar punto más a la izquierda
-        p1 = min(vertices_unicos)
-        indexP1 = vertices_unicos.index(p1)
-        
-        pHelper = indexP1
-
-        while (True):
-            envConv.append(pHelper)
-
-            p2 = (pHelper + 1) % len(vertices_unicos) 
-
-            for i in range(len(vertices_unicos)):
-                if i == pHelper:
-                    continue
-                if ccw(vertices_unicos[pHelper], vertices_unicos[i], vertices_unicos[p2]):
-                    p2 = i
-
-            pHelper = p2
-
-
-            if(pHelper==indexP1):
-                break
-        
-        # return envConv
-        poligonoRet= Poligono([vertices_unicos[i] for i in envConv])
-        return poligonoRet
 
     #region PARTE 5B - ENVOLVENTE CONVEXA: GRAHAM 
 
@@ -441,6 +402,7 @@ class Poligono:
 
         poligonoRet = Poligono(L)
         return poligonoRet
+    
 
     
     ######################### FUNCIONES DE DIBUJADO #########################
@@ -679,6 +641,29 @@ def ccw(punto1, punto2, punto3):
         return np.dot(punto2 - punto1, punto2 - punto1) > np.dot(punto3 - punto1, punto3 - punto1) #coger el punto mas lejano
     return False
 
+def esConvexo(punto1, punto2, punto3):
+    """
+    Algoritmo que recibiendo 3 puntos determina si el vértice punto2 es convexo.
+
+    :param punto1: punto (x, y)
+    :param punto2: punto (x, y)
+    :param punto3: punto (x, y)
+    :return True si el giro está en sentido anti-horario
+    """
+
+    punto1 = np.array(punto1)
+    punto2 = np.array(punto2)
+    punto3 = np.array(punto3)
+
+    vectorU = [punto2[0] - punto1[0], punto2[1] - punto1[1]] #el del final menos el primero.
+    vectorV = [punto3[0] - punto1[0], punto3[1] - punto1[1]] #el del final menos el primero. 
+
+    #calcular el producto vectorial de u y v
+    crossProduct = np.cross(vectorU, vectorV)
+    if(crossProduct > 0):
+        return True
+    return False
+    
 def guardarListaFiguras(listaFiguras, ruta_archivo):
     """
     Algoritmo que recibiendo la lista de figuras y el nombre de la ruta, guarda su información en json que se utilizará en los ejercicios
