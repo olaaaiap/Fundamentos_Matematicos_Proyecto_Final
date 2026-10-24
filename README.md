@@ -1,3 +1,7 @@
+VIDEO
+
+https://youtu.be/Ctcd2lAr9gM
+
 
 # Fundamentos matemáticos - proyecto final
   
