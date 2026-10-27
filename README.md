@@ -4,8 +4,6 @@
 
 Es el proyecto final de la asignatura de Fundamentos Matemáticos del máster. Se ha desarrollado una clase `Poligono` sobre la que se pueden ejecutar algoritmos geométricos, como el cálculo de la envolvente convexa, la triangulación o el área. Varias de las funciones son versiones mejoradas de algoritmos base.
 
-[![Vídeo de demostración](https://img.youtube.com/vi/Ctcd2lAr9gM/hqdefault.jpg)](https://youtu.be/Ctcd2lAr9gM)
-
 ## Enlaces
 
 - 🎥 **Vídeo de demostración:** [youtu.be/Ctcd2lAr9gM](https://youtu.be/Ctcd2lAr9gM)
