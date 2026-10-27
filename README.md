@@ -1,129 +1,107 @@
-VIDEO
+# Fundamentos matemáticos - Proyecto final
 
-https://youtu.be/Ctcd2lAr9gM
+**Clase `Poligono` en Python con algoritmos de geometría computacional: punto en polígono, triangulación, cálculo de área y envolvente convexa.**
 
+Es el proyecto final de la asignatura de Fundamentos Matemáticos del máster. Se ha desarrollado una clase `Poligono` sobre la que se pueden ejecutar algoritmos geométricos, como el cálculo de la envolvente convexa, la triangulación o el área. Varias de las funciones son versiones mejoradas de algoritmos base.
 
-# Fundamentos matemáticos - proyecto final
-  
-  En este proyecto final se ha desarrollado una clase Poligono donde se podrán ejecutar algoritmos geométricos como el calculo de la envolvente convexa, triangulación, área etc. 
-  Para ello se han desarrollado las siguientes funciones:
+[![Vídeo de demostración](https://img.youtube.com/vi/Ctcd2lAr9gM/hqdefault.jpg)](https://youtu.be/Ctcd2lAr9gM)
 
-#### contieneMejorado(self, punto): versión mejorada de contiene(self, punto) 
+## Enlaces
 
-Algoritmo mejorado de Raycasting para determinar si un punto está dentro del polígono. Lanzamos un rayo horizontal hacia la derecha y detectamos la cantidad de cruces que hay. Si la cantidad es impar, devolverá True.
+- 🎥 **Vídeo de demostración:** [youtu.be/Ctcd2lAr9gM](https://youtu.be/Ctcd2lAr9gM)
 
- Referencia al recurso utilizado:
- 
-https://notes.suhaib.in/docs/code/geometry/theory/check-if-a-point-belongs-to-a-polygon/
+## Algoritmos implementados
 
-  
-##### Parámetros
-- punto: punto (x, y)
+| Función | Qué hace | Técnica |
+|---|---|---|
+| `contieneMejorado` | Determina si un punto está dentro del polígono | Raycasting |
+| `earClipping` | Triangula el polígono | Ear Clipping |
+| `hayVerticeDentro` | Comprueba si algún vértice cae dentro de un triángulo | Comparación de áreas |
+| `hayVerticeDentroMejorado` | Igual que la anterior, en versión mejorada | Orientación |
+| `calcularArea` | Calcula el área total de una lista de triángulos | Suma de áreas |
+| `calcularAreaTriangulo` | Calcula el área de un triángulo | — |
+| `envolventeConvexaJarvisMejorado` | Calcula la envolvente convexa | Jarvis (Gift Wrapping) |
+| `envolventeConvexaGrahamMejorado` | Calcula la envolvente convexa | Graham |
 
-##### Devuelve
-- True si el punto está dentro del Polígono
+## Detalle de las funciones
 
-    
+### Punto en polígono
 
-#### earClipping(self)
+#### `contieneMejorado(self, punto)`
 
-Algoritmo que encontrará la triangulación de un polígono utilizando la técnica de Ear Clipping.
+Es la versión mejorada de `contiene(self, punto)`. Usa un algoritmo de raycasting mejorado para determinar si un punto está dentro del polígono: lanza un rayo horizontal hacia la derecha y cuenta los cruces. Si la cantidad es impar, devuelve `True`.
 
+- **Parámetros:** `punto`, el punto (x, y).
+- **Devuelve:** `True` si el punto está dentro del polígono.
+- **Referencia:** [Check if a point belongs to a polygon](https://notes.suhaib.in/docs/code/geometry/theory/check-if-a-point-belongs-to-a-polygon/)
 
-##### Devuelve
-- Lista de triángulos, donde cada triángulo tendrá 3 vértices
+### Triangulación
 
+#### `earClipping(self)`
 
-#### hayVerticeDentro(listaVertices, v_prev, v_i, v_next)
+Algoritmo que encuentra la triangulación de un polígono con la técnica de Ear Clipping.
 
-Algoritmo que comprobará si hay algún vértice dentro del triángulo formado por v_prev, v_i y v_next.
+- **Devuelve:** una lista de triángulos, cada uno con 3 vértices.
 
+#### `hayVerticeDentro(listaVertices, v_prev, v_i, v_next)`
 
-Referencia al recurso utilizado:
- 
-https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle - Triangles area approach
+Algoritmo que comprueba si hay algún vértice dentro del triángulo formado por `v_prev`, `v_i` y `v_next`.
 
-  
-##### Parámetros
-- listaVertices: lista de vértices del polígono.
-- v_prev, v_i, v_next: vértices del triángulo
+- **Parámetros:**
+  - `listaVertices`: lista de vértices del polígono.
+  - `v_prev`, `v_i`, `v_next`: vértices del triángulo.
+- **Devuelve:** `True` si hay un vértice dentro del triángulo y `False` si no lo hay.
+- **Referencia:** [Check if a point is in a 2D triangle](https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle) (*Triangles area approach*)
 
-##### Devuelve
-- True si hay un vértice dentro del triángulo, False si no lo hay
+#### `hayVerticeDentroMejorado(listaVertices, v_prev, v_i, v_next)`
 
-#### hayVerticeDentroMejorado(listaVertices, v_prev, v_i, v_next)
+Versión mejorada de la anterior. También comprueba si hay algún vértice dentro del triángulo formado por `v_prev`, `v_i` y `v_next`.
 
-Algoritmo mejorado que comprobará si hay algún vértice dentro del triángulo formado por v_prev, v_i y v_next.
+- **Parámetros:**
+  - `listaVertices`: lista de vértices del polígono.
+  - `v_prev`, `v_i`, `v_next`: vértices del triángulo.
+- **Devuelve:** `True` si hay un vértice dentro del triángulo y `False` si no lo hay.
+- **Referencia:** [Check if a point is in a 2D triangle](https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle) (*Orientation approach*)
 
-https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle - Orientation approach
+### Área
 
-  
-##### Parámetros
-- listaVertices: lista de vértices del polígono.
-- v_prev, v_i, v_next: vértices del triángulo
-  
+#### `calcularArea(self, triangulos)`
 
-##### Devuelve
-- True si hay un vértice dentro del triángulo, False si no lo hay
+Algoritmo que calcula el área total de una secuencia de triángulos.
 
+- **Parámetros:** `triangulos`, una lista de triángulos con 3 vértices cada uno.
+- **Devuelve:** el área total de los triángulos.
 
-#### calcularArea(self, triangulos)
-Algoritmo que calculará el área total de una secuencia de triángulos
+#### `calcularAreaTriangulo(punto1, punto2, punto3)`
 
-  
-##### Parámetros
-- triangulos: lista de triángulos, donde cada triángulo tendrá 3 vértices
-  
+Algoritmo que calcula el área de un triángulo.
 
-##### Devuelve
-- Área total de los triángulos
+- **Parámetros:** `punto1`, `punto2` y `punto3`, los 3 vértices del triángulo.
+- **Devuelve:** el área del triángulo.
 
-  
-#### calcularAreaTriangulo
+### Envolvente convexa
 
+#### `envolventeConvexaJarvisMejorado(self)`
 
-Algoritmo que calculará el área total de un triángulo
+Es la versión mejorada de `envolventeConvexaJarvis(self)`. Encuentra la envolvente convexa con la técnica de Jarvis.
 
-  
-##### Parámetros
-- punto1, punto2, punto3: los 3 vértices del triángulo
-  
+- **Devuelve:** el polígono de la envolvente convexa.
 
-##### Devuelve
-- Área del triángulo
+#### `envolventeConvexaGrahamMejorado(self)`
 
-#### envolventeConvexaJarvisMejorado(self): versión mejorada de envolventeConvexaJarvis(self)
+Es la versión mejorada de `envolventeConvexaGraham(self)`. Encuentra la envolvente convexa con la técnica de Graham.
 
-Algoritmo mejorado que encontrará la envolvente convexa utilizando la técnica de Jarvis.
-
-
-##### Devuelve
-- Polígono de la envolvente convexa.
-
-
-
-#### envolventeConvexaGrahamMejorado(self): versión mejorada de envolventeConvexaGraham(self)
-
-Algoritmo mejorado que encontrará la envolvente convexa utilizando la técnica de Graham.
-
-##### Devuelve
-- Polígono de la envolvente convexa.
-
+- **Devuelve:** el polígono de la envolvente convexa.
 
 ### Otros algoritmos
 
-Hay otros algoritmos como las de dibujado o carga de datos que no se han descrito en este Readme, ya que no son parte de la clase Poligono, o no son lo suficientemente relevantes. Para más detalles analizar el código y sus comentarios.
+Hay otros algoritmos, como los de dibujado o carga de datos, que no se describen en este README porque no forman parte de la clase `Poligono` o no son lo suficientemente relevantes. Para más detalles, se pueden consultar el código y sus comentarios.
 
+## Tecnologías
 
-## Recursos utilizados
+- **Python**
 
-https://www.baeldung.com/cs/check-if-point-is-in-2d-triangle
-
-https://notes.suhaib.in/docs/code/geometry/theory/check-if-a-point-belongs-to-a-polygon/
-
-Apuntes y explicaciones que se han visto en clase.
 
 ## Autora
-
 
 Olaia Picabea
